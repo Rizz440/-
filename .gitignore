@@ -1,41 +1,178 @@
-# Compiled Lua sources
-luac.out
+-- สร้าง ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
-# luarocks build files
-*.src.rock
-*.zip
-*.tar.gz
+-- สร้าง Frame สำหรับจัดกลุ่มปุ่มและ toggle
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 150, 0, 200) -- ขนาดของ Frame เล็กลง
+frame.Position = UDim2.new(0, 20, 0, 40) -- ตำแหน่งของ Frame เล็กน้อยจากปุ่มด้านบน
+frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+frame.Active = true
+frame.Draggable = true -- ทำให้ Frame ลากได้
+frame.Parent = screenGui
 
-# Object files
-*.o
-*.os
-*.ko
-*.obj
-*.elf
+-- สร้าง Toggle สำหรับการเปิด/ปิด GUI
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 100, 0, 50)
+toggleButton.Position = UDim2.new(0, 10, 0, 10) -- ตำแหน่งอยู่ด้านบนสุด
+toggleButton.Text = "เปิด/ปิด GUI"
+toggleButton.Parent = screenGui
 
-# Precompiled Headers
-*.gch
-*.pch
+-- การแสดงผลของ frame (true = เปิด, false = ปิด)
+local isGuiVisible = true
 
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-*.def
-*.exp
+-- ฟังก์ชันสำหรับเปิด/ปิด GUI
+toggleButton.MouseButton1Click:Connect(function()
+    isGuiVisible = not isGuiVisible
+    frame.Visible = isGuiVisible
+end)
 
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
+-- ฟังก์ชันสร้าง Toggle
+local function createToggle(name, position, callback)
+    local toggle = Instance.new("TextButton")
+    toggle.Size = UDim2.new(0, 130, 0, 30) -- ขนาดของปุ่ม Toggle เล็กลง
+    toggle.Position = position
+    toggle.Text = name
+    toggle.Parent = frame
 
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
+    local isActive = false
 
+    toggle.MouseButton1Click:Connect(function()
+        isActive = not isActive
+        toggle.Text = name .. (isActive and " (เปิด)" or " (ปิด)")
+        callback(isActive)
+    end)
+end
+
+-- สร้างปุ่ม Teleport
+local teleportButton = Instance.new("TextButton")
+teleportButton.Size = UDim2.new(0, 130, 0, 30) -- ขนาดของปุ่มเล็กลง
+teleportButton.Position = UDim2.new(0, 10, 0, 10) -- ปรับตำแหน่ง
+teleportButton.Text = "บล็อกวาป"
+teleportButton.Parent = frame
+
+teleportButton.MouseButton1Click:Connect(function()
+    print("Printed")
+    
+    -- สร้างตัวแปร mouse และ tool
+    local mouse = game.Players.LocalPlayer:GetMouse()
+    local tool = Instance.new("Tool")
+    
+    tool.RequiresHandle = false
+    tool.Name = "มอสเกย์พาวาป"
+    
+    tool.Activated:Connect(function()
+        local pos = mouse.Hit + Vector3.new(0, 2.5, 0)
+        pos = CFrame.new(pos.X, pos.Y, pos.Z)
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = pos
+    end)
+    
+    tool.Parent = game.Players.LocalPlayer.Backpack
+end)
+
+-- สร้าง Toggle สำหรับ "ล็อกเป้า"
+createToggle("ล็อกเป้า", UDim2.new(0, 10, 0, 50), function(v)
+    isAiming = v
+    FOVring.Visible = v
+
+    if v then
+        RunService:BindToRenderStep("FOVUpdate", Enum.RenderPriority.Camera.Value, function()
+            updateDrawings()
+            local closest = getClosestPlayerInFOV("Head")
+            if closest and closest.Character:FindFirstChild("Head") then
+                lookAt(closest.Character.Head.Position)
+            end
+        end)
+    else
+        RunService:UnbindFromRenderStep("FOVUpdate")
+        FOVring.Visible = false
+    end
+end)
+
+-- สร้าง Toggle สำหรับ "วิ่งเร็ว 80%"
+createToggle("วิ่งเร็ว 80%", UDim2.new(0, 10, 0, 90), function(v)
+    if v then
+        print("ฟังก์ชันที่สอง เปิดใช้งาน")
+        
+        -- เพิ่มโค้ดสำหรับปรับความเร็วการเดิน
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoid = character:WaitForChild("Humanoid")
+
+        local currentWalkSpeed = humanoid.WalkSpeed
+        local newWalkSpeed = currentWalkSpeed * 1.8
+        humanoid.WalkSpeed = newWalkSpeed
+        
+    else
+        print("ฟังก์ชันที่สอง ปิดใช้งาน")
+        
+        -- รีเซ็ตความเร็วการเดินกลับไปยังค่าปกติ
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoid = character:WaitForChild("Humanoid")
+
+        humanoid.WalkSpeed = humanoid.WalkSpeed / 2.8
+    end
+end)
+
+-- สร้าง Toggle สำหรับ "มุมมองแบบกว้าง"
+createToggle("มุมมองแบบกว้าง", UDim2.new(0, 10, 0, 130), function(v)
+    if v then
+        print("ฟังก์ชันที่สาม เปิดใช้งาน")
+        
+        -- เพิ่มโค้ดสำหรับการมองทะลุผ่านวัตถุ
+        local camera = workspace.CurrentCamera
+        
+        local function onRenderStep()
+            -- ปรับค่าของ FieldOfView เพื่อให้มองทะลุ
+            camera.FieldOfView = 800  -- เพิ่มค่า FieldOfView เพื่อให้มองเห็นผ่านวัตถุ
+        end
+
+        -- เชื่อมต่อฟังก์ชันกับ RenderStepped
+        fovConnection = game:GetService("RunService").RenderStepped:Connect(onRenderStep)
+
+    else
+        print("ฟังก์ชันที่สาม ปิดใช้งาน")
+
+        -- รีเซ็ตค่า FieldOfView กลับเป็นค่าปกติ
+        local camera = workspace.CurrentCamera
+        camera.FieldOfView = 70  -- ค่า FieldOfView ปกติของกล้อง
+
+        -- ยกเลิกการเชื่อมต่อฟังก์ชันกับ RenderStepped
+        if fovConnection then
+            fovConnection:Disconnect()
+            fovConnection = nil
+        end
+    end
+end)
+
+-- สร้าง Toggle สำหรับ "กระโดดสูงไม่บอก%🤫"
+createToggle("กระโดดสูงไม่บอก%🤫", UDim2.new(0, 10, 0, 170), function(v)
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+
+    if v then
+        print("ฟังก์ชันที่สี่ เปิดใช้งาน")
+
+        -- เพิ่มโค้ดสำหรับปรับค่า JumpPower
+        humanoid.JumpPower = humanoid.JumpPower * 2
+
+    else
+        print("ฟังก์ชันที่สี่ ปิดใช้งาน")
+
+        -- รีเซ็ตค่า JumpPower กลับเป็นค่าปกติ
+        humanoid.JumpPower = humanoid.JumpPower / 2
+    end
+end)
+
+-- สร้าง Toggle สำหรับ "ยังคิดไม่ออก"
+createToggle("ยังคิดไม่ออก", UDim2.new(0, 10, 0, 210), function(v)
+    if v then
+        print("ฟังก์ชันที่ห้า เปิดใช้งาน")
+        -- ใส่โค้ดสำหรับฟังก์ชันที่ห้าที่นี่
+    else
+        print("ฟังก์ชันที่ห้า ปิดใช้งาน")
+        -- ใส่โค้ดสำหรับฟังก์ชันที่ห้าที่นี่
+    end
+end)
